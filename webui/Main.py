@@ -69,7 +69,7 @@ from app.utils.logging_utils import configure_terminal_logger
 from app.utils import utils
 
 st.set_page_config(
-    page_title="MoneyPrinterTurbo",
+    page_title="WeGoGen",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="auto",
