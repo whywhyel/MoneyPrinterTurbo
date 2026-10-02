@@ -48,6 +48,7 @@ from app.services import bgm as bgm_service
 from app.services import material_upload as material_upload_service
 from app.services import (
     cache_manager,
+    chatbot,
     llm,
     loomloom,
     material,
@@ -8403,6 +8404,61 @@ def _render_application():
         uploaded_bgm_file,
         voice_mode,
     )
+
+    with st.container(key="wegogen_ai_assistant"):
+        st.markdown("### 🤖 WeGoGen AI Assistant")
+        st.caption("Ask for hooks, script rewrites, scene ideas, retention improvements, or platform adaptations.")
+
+        if "wegogen_chat_messages" not in st.session_state:
+            st.session_state["wegogen_chat_messages"] = [
+                {
+                    "role": "assistant",
+                    "content": "Hi! I can help you improve your video, rewrite the script, create hooks, build scenes, or adapt it for TikTok and Shorts.",
+                }
+            ]
+
+        for chat_message in st.session_state["wegogen_chat_messages"]:
+            with st.chat_message(chat_message["role"]):
+                st.markdown(chat_message["content"])
+
+        chat_prompt = st.chat_input(
+            "Ask WeGoGen AI about your video or script...",
+            key="wegogen_chat_input",
+        )
+
+        if chat_prompt:
+            history = list(st.session_state["wegogen_chat_messages"])
+            st.session_state["wegogen_chat_messages"].append(
+                {"role": "user", "content": chat_prompt}
+            )
+            with st.chat_message("user"):
+                st.markdown(chat_prompt)
+
+            try:
+                with st.chat_message("assistant"):
+                    with st.spinner("Thinking..."):
+                        answer = chatbot.respond(
+                            user_message=chat_prompt,
+                            history=history,
+                            video_subject=getattr(params, "video_subject", ""),
+                            video_script=getattr(params, "video_script", ""),
+                        )
+                    st.markdown(answer)
+                st.session_state["wegogen_chat_messages"].append(
+                    {"role": "assistant", "content": answer}
+                )
+            except Exception as exc:
+                logger.exception("WeGoGen AI Assistant failed")
+                error_message = "I couldn't reach the configured AI provider. Please check the LLM settings."
+                with st.chat_message("assistant"):
+                    st.error(error_message)
+                st.session_state["wegogen_chat_messages"].append(
+                    {"role": "assistant", "content": error_message}
+                )
+
+        if st.button("Clear chat", key="wegogen_clear_chat"):
+            st.session_state["wegogen_chat_messages"] = []
+            st.rerun()
 
     # 生成分支在启动后台线程前已经请求过保存。普通控件交互继续请求非阻塞保存；
     # 如果后台任务正在使用配置，配置层会在任务结束时自动应用并落盘最新值。
